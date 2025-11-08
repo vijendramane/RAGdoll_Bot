@@ -25,7 +25,103 @@ const upload = multer({
 });
 
 router.get('/', async (_req, res) => {
-	return res.json({ items: [] });
+	try {
+		const sources = await FAQSourceService.getAllSources();
+		return res.json({ items: sources });
+	} catch (error) {
+		console.error('Failed to fetch FAQ sources:', error);
+		return res.status(500).json({ error: 'Failed to fetch FAQ sources' });
+	}
+});
+
+// Get FAQ source by ID for editing
+router.get('/sources/:sourceId', async (req, res) => {
+	try {
+		const { sourceId } = req.params;
+		const source = await FAQSourceService.getSource(sourceId);
+
+		if (!source) {
+			return res.status(404).json({ error: 'FAQ source not found' });
+		}
+
+		return res.json(source);
+	} catch (error) {
+		console.error('Failed to fetch FAQ source:', error);
+		return res.status(500).json({ error: 'Failed to fetch FAQ source' });
+	}
+});
+
+// Update FAQ source content
+router.put('/sources/:sourceId', async (req, res) => {
+	try {
+		const { sourceId } = req.params;
+		const { content, mode } = req.body; // mode: 'text' or 'qa'
+
+		if (!content || typeof content !== 'string') {
+			return res.status(400).json({ error: 'Content is required and must be a string' });
+		}
+
+		// Check if source exists
+		const existingSource = await FAQSourceService.getSource(sourceId);
+		if (!existingSource) {
+			return res.status(404).json({ error: 'FAQ source not found' });
+		}
+
+		// Delete existing vectors for this source
+		await vectorDb.deleteBySource(sourceId);
+
+		// Process updated content
+		const chunks = chunkText(content, 500, 50);
+		const vectors = await embedTexts(chunks);
+
+		await vectorDb.upsert(
+			vectors.map((values, i) => ({
+				id: `${sourceId}-${i}`,
+				values,
+				metadata: { source: sourceId, text: chunks[i] }
+			}))
+		);
+
+		// Update metadata
+		await FAQSourceService.updateSource(sourceId, {
+			content,
+			chunkCount: chunks.length
+		});
+
+		return res.json({
+			ok: true,
+			message: 'FAQ content updated successfully',
+			chunkCount: chunks.length
+		});
+	} catch (error) {
+		console.error('Failed to update FAQ source:', error);
+		return res.status(500).json({ error: 'Failed to update FAQ content: ' + (error as Error).message });
+	}
+});
+
+// Delete FAQ source
+router.delete('/sources/:sourceId', async (req, res) => {
+	try {
+		const { sourceId } = req.params;
+
+		// Check if source exists
+		const existingSource = await FAQSourceService.getSource(sourceId);
+		if (!existingSource) {
+			return res.status(404).json({ error: 'FAQ source not found' });
+		}
+
+		// Delete vectors and metadata
+		await vectorDb.deleteBySource(sourceId);
+		await FAQSourceService.deleteSource(sourceId);
+
+		return res.json({
+			ok: true,
+			message: 'FAQ source deleted successfully'
+		});
+	} catch (error) {
+		console.error('Failed to delete FAQ source:', error);
+		return res.status(500).json({ error: 'Failed to delete FAQ source: ' + (error as Error).message });
+	}
 });
 
 router.post('/upload', (req, res, next) => {
