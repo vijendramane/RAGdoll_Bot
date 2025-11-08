@@ -222,12 +222,13 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
         // Next: try a general model answer without RAG
         try {
             const general = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
+                model: CHAT_MODEL,
                 messages: [
                     { role: 'system', content: 'You are a helpful e-commerce assistant. Answer concisely and clearly.' },
                     { role: 'user', content: userMessage }
                 ],
-                temperature: 0.3
+                temperature: 0.3,
+                max_tokens: 400
             });
             const answer = general.choices[0]?.message?.content || 'I could not generate a response.';
             await appendHistory(sessionId, 'assistant', answer);
