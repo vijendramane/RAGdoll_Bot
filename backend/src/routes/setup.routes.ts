@@ -55,11 +55,30 @@ router.post('/test-connection', async (req, res) => {
 router.post('/save', async (_req, res) => {
 	try {
 		const parsed = DbConfigSchema.safeParse(_req.body);
-		if (!parsed.success) return res.status(400).json({ error: 'Invalid config', details: parsed.error.flatten() });
+		if (!parsed.success) {
+			return res.status(400).json({
+				error: 'Invalid configuration',
+				details: parsed.error.flatten()
+			});
+		}
+
+		console.log('Saving database configuration...');
 		await saveDbConfig(parsed.data);
-		return res.json({ ok: true });
+		console.log('Database configuration saved successfully');
+
+		return res.json({ ok: true, message: 'Configuration saved successfully' });
 	} catch (e) {
-		return res.status(500).json({ error: 'Failed to save configuration' });
+		const error = e as Error;
+		console.error('Failed to save database configuration:', error);
+
+		// Check if it's a file system permission issue
+		if (error.message.includes('EACCES') || error.message.includes('EPERM')) {
+			return res.status(500).json({
+				error: 'Permission denied. Check write permissions for the data directory.'
+			});
+		}
+
+		return res.status(500).json({ error: 'Failed to save configuration: ' + error.message });
 	}
 });
 
