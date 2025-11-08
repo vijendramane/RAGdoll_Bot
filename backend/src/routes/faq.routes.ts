@@ -1,8 +1,20 @@
 import { Router } from 'express';
 import multer from 'multer';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { processFAQFile } from '../services/faq/FAQUploadService';
 
 const router = Router();
+
+// Ensure uploads directory exists
+const ensureUploadsDir = async () => {
+	try {
+		await fs.mkdir('uploads', { recursive: true });
+	} catch (error) {
+		console.error('Failed to create uploads directory:', error);
+	}
+};
+
 const upload = multer({
 	dest: 'uploads/',
 	limits: { fileSize: 10 * 1024 * 1024 } // 10MB
