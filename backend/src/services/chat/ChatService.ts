@@ -53,6 +53,16 @@ function generateOrderClarificationResponse(intent: string): string {
 export async function handleQuery(sessionId: string, userMessage: string): Promise<ChatResult> {
     await appendHistory(sessionId, 'user', userMessage);
     try {
+        // Check for order-related queries that need order ID clarification
+        const hasOrderIntent = detectOrderIntent(userMessage);
+        const orderId = extractOrderId(userMessage);
+
+        if (hasOrderIntent && !orderId) {
+            const clarificationResponse = generateOrderClarificationResponse('order');
+            await appendHistory(sessionId, 'assistant', clarificationResponse);
+            return { answer: clarificationResponse, sources: [] };
+        }
+
         // Cache lookup
         const cached = await (redis as any).get?.(`ans:${userMessage}`);
         if (cached) {
