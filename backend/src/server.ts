@@ -14,6 +14,7 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import fs from 'node:fs/promises';
 import { seedFAQIfEnabled } from './bootstrap/seedFAQ';
+import { testOpenAIConnection } from './config/openai.config';
 
 const app = express();
 const server = http.createServer(app);
