@@ -10,6 +10,7 @@ import chatRoutes from './routes/chat.routes';
 import faqRoutes from './routes/faq.routes';
 import setupRoutes from './routes/setup.routes';
 import adminRoutes from './routes/admin.routes';
+import debugRoutes from './routes/debug.routes';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import fs from 'node:fs/promises';
