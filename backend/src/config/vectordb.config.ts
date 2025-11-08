@@ -25,6 +25,12 @@ class MemoryVectorDb implements VectorDb {
 		const scored = memoryStore.map((m) => ({ id: m.id, score: cosineSimilarity(vector, m.values), metadata: m.metadata }));
 		return scored.sort((a, b) => b.score - a.score).slice(0, topK);
 	}
+	async getBySource(sourceId: string) {
+		return memoryStore.filter(m => m.metadata?.source === sourceId);
+	}
+	async deleteBySource(sourceId: string) {
+		memoryStore = memoryStore.filter(m => m.metadata?.source !== sourceId);
+	}
 }
 
 class PineconeVectorDb implements VectorDb {
