@@ -51,6 +51,22 @@ class PineconeVectorDb implements VectorDb {
 		const res = await this.index.query({ vector, topK, includeMetadata: true });
 		return (res.matches || []).map((m: any) => ({ id: m.id, score: m.score, metadata: m.metadata }));
 	}
+	async getBySource(sourceId: string) {
+		// Pinecone doesn't support filtering by source metadata directly in list,
+		// so we'll need to use a query with a filter
+		const res = await this.index.query({
+			vector: new Array(1536).fill(0), // Dummy vector for filtering
+			topK: 10000,
+			filter: { source: sourceId },
+			includeMetadata: true,
+			includeValues: true
+		});
+		return (res.matches || []).map((m: any) => ({ id: m.id, values: m.values, metadata: m.metadata }));
+	}
+	async deleteBySource(sourceId: string) {
+		// Delete all vectors with the given sourceId
+		await this.index.delete({ filter: { source: sourceId } });
+	}
 }
 
 let impl: VectorDb;
