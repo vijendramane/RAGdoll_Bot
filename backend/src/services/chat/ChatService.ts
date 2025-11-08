@@ -79,6 +79,14 @@ async function recordChatAnalytics(
     }
 }
 
+// Helper function to check if OpenAI is available
+function isOpenAIAvailable(): boolean {
+    return !!process.env.OPENAI_API_KEY &&
+           process.env.OPENAI_API_KEY !== 'dummy-key' &&
+           process.env.OPENAI_API_KEY.length > 30 &&
+           !process.env.OPENAI_API_KEY.includes('dummy-key');
+}
+
 export async function handleQuery(sessionId: string, userMessage: string): Promise<ChatResult> {
     const startTime = Date.now();
     await appendHistory(sessionId, 'user', userMessage);
