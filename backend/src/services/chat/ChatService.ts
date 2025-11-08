@@ -129,7 +129,12 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
                 { role: 'user', content: userMessage }
             ] as const;
 
-            const completion = await openai.chat.completions.create({ model: 'gpt-4o-mini', messages: messages as any, temperature: 0.3 });
+            const completion = await openai.chat.completions.create({
+                model: CHAT_MODEL,
+                messages: messages as any,
+                temperature: 0.3,
+                max_tokens: 500
+            });
             const answer = completion.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
             await appendHistory(sessionId, 'assistant', answer);
 
