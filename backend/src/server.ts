@@ -59,6 +59,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/faq', faqRoutes);
 app.use('/api/setup', setupRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/debug', debugRoutes);
 
 // Swagger
 const swaggerSpec = swaggerJSDoc({
