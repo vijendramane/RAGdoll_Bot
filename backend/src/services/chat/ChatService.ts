@@ -203,6 +203,11 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
                     const result = { answer, sources: [], clarification: generateClarificationOptions(userMessage) };
                     await appendHistory(sessionId, 'assistant', answer);
                     await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
+
+                    // Record analytics for function calling response
+                    const responseTime = Date.now() - startTime;
+                    recordChatAnalytics(sessionId, userMessage, answer, [], responseTime, true);
+
                     return result;
                 }
             }
