@@ -226,6 +226,7 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
 
         // Next: try a general model answer without RAG
         try {
+            console.log('🤖 Calling OpenAI with general e-commerce prompt');
             const general = await openai.chat.completions.create({
                 model: CHAT_MODEL,
                 messages: [
@@ -236,6 +237,7 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
                 max_tokens: 400
             });
             const answer = general.choices[0]?.message?.content || 'I could not generate a response.';
+            console.log(`✅ OpenAI general response: "${answer.substring(0, 100)}..."`);
             await appendHistory(sessionId, 'assistant', answer);
             const result = { answer, sources: [] , clarification: generateClarificationOptions(userMessage)};
             await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
