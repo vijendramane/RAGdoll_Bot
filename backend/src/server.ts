@@ -26,9 +26,17 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('combined'));
 
-// Ensure uploads directory exists for FAQ uploads
+// Ensure required directories exist
 (async () => {
-	try { await fs.mkdir('uploads', { recursive: true }); } catch {}
+	const requiredDirs = ['uploads', 'data'];
+	for (const dir of requiredDirs) {
+		try {
+			await fs.mkdir(dir, { recursive: true });
+			console.log(`✓ Directory ensured: ${dir}`);
+		} catch (error) {
+			console.error(`✗ Failed to create directory ${dir}:`, error);
+		}
+	}
 	// Seed sample FAQ if enabled
 	await seedFAQIfEnabled();
 })();
