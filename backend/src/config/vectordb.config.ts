@@ -2,6 +2,8 @@
 export interface VectorDb {
 	upsert: (vectors: Array<{ id: string; values: number[]; metadata?: Record<string, unknown> }>) => Promise<void>;
 	query: (vector: number[], topK: number) => Promise<Array<{ id: string; score: number; metadata?: Record<string, unknown> }>>;
+	getBySource: (sourceId: string) => Promise<Array<{ id: string; values: number[]; metadata?: Record<string, unknown> }>>;
+	deleteBySource: (sourceId: string) => Promise<void>;
 }
 
 let memoryStore: Array<{ id: string; values: number[]; metadata?: Record<string, unknown> }> = [];
