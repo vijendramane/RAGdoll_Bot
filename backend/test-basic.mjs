@@ -88,7 +88,7 @@ app.post('/api/setup/save', (req, res) => {
   }
 });
 
-const PORT = 4001;
+const PORT = 4002;
 app.listen(PORT, () => {
   console.log(`✅ Test server running on port ${PORT}`);
   console.log('📊 Available endpoints:');
