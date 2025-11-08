@@ -232,50 +232,71 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
             }
         } catch {}
 
-        // Next: try a general model answer without RAG
-        try {
-            console.log('🤖 Calling OpenAI with general e-commerce prompt');
-            const general = await openai.chat.completions.create({
-                model: CHAT_MODEL,
-                messages: [
-                    { role: 'system', content: 'You are a helpful e-commerce assistant. Answer concisely and clearly.' },
-                    { role: 'user', content: userMessage }
-                ],
-                temperature: 0.3,
-                max_tokens: 400
-            });
-            const answer = general.choices[0]?.message?.content || 'I could not generate a response.';
-            console.log(`✅ OpenAI general response: "${answer.substring(0, 100)}..."`);
-            await appendHistory(sessionId, 'assistant', answer);
-            const result = { answer, sources: [] , clarification: generateClarificationOptions(userMessage)};
-            await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
+        // Next: try a general model answer without RAG (only if OpenAI is available)
+        if (isOpenAIAvailable()) {
+            try {
+                console.log('🤖 Calling OpenAI with general e-commerce prompt');
+                const general = await openai.chat.completions.create({
+                    model: CHAT_MODEL,
+                    messages: [
+                        { role: 'system', content: 'You are a helpful e-commerce assistant. Answer concisely and clearly.' },
+                        { role: 'user', content: userMessage }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 400
+                });
+                const answer = general.choices[0]?.message?.content || 'I could not generate a response.';
+                console.log(`✅ OpenAI general response: "${answer.substring(0, 100)}..."`);
+                await appendHistory(sessionId, 'assistant', answer);
+                const result = { answer, sources: [] , clarification: generateClarificationOptions(userMessage)};
+                await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
 
-            // Record analytics for general model response
-            const responseTime = Date.now() - startTime;
-            recordChatAnalytics(sessionId, userMessage, answer, [], responseTime, true);
+                // Record analytics for general model response
+                const responseTime = Date.now() - startTime;
+                recordChatAnalytics(sessionId, userMessage, answer, [], responseTime, true);
 
-            return result;
-        } catch {
-            // 2) If OpenAI not configured, return a heuristic fallback
-            const intents = classifyIntent(userMessage);
-            const top = Object.entries(intents).sort((a,b) => b[1]-a[1])[0]?.[0] || 'product_info';
-            const canned: Record<string, string> = {
-                product_info: 'I can help with product details and availability. Please provide a product name or SKU.',
-                order_tracking: 'I can help track your order. Please share your order ID.',
-                returns: 'I can help with returns or refunds. Do you have your order ID handy?',
-                shipping: 'I can help with shipping options and delivery times. Which location are you shipping to?'
-            };
-            const answer = canned[top];
-            await appendHistory(sessionId, 'assistant', answer);
-            const result = { answer, sources: [], clarification: generateClarificationOptions(userMessage) };
-            await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
-
-            // Record analytics for fallback response
-            const responseTime = Date.now() - startTime;
-            recordChatAnalytics(sessionId, userMessage, answer, [], responseTime, true);
-
-            return result;
+                return result;
+            } catch (error) {
+                console.error('❌ OpenAI call failed:', error);
+            }
         }
+
+        // Enhanced fallback system when OpenAI is not available
+        console.log('⚠️ Using fallback response system (OpenAI not available)');
+        const intents = classifyIntent(userMessage);
+        const top = Object.entries(intents).sort((a,b) => b[1]-a[1])[0]?.[0] || 'product_info';
+
+        const canned: Record<string, string> = {
+            product_info: `I can help you find products! Try asking about specific items by name, SKU, or category. For example: "What laptops do you have?" or "Show me details for product XYZ123."`,
+            order_tracking: `I can help track your order! Please provide your order ID and I'll check the status for you. Order IDs typically look like ABC-1234 or contain numbers.`,
+            returns: `I can help with returns! To process a return, I'll need your order ID. Returns are usually accepted within 30 days of delivery. What's your order ID?`,
+            shipping: `I can help with shipping questions! Where would you like us to ship your order? We offer standard, expedited, and overnight shipping options.`,
+            payment: `I can help with payment questions! We accept credit cards, debit cards, PayPal, and other payment methods. What's your specific payment question?`,
+            general: `I'm your e-commerce assistant! I can help with products, orders, shipping, returns, and payments. What would you like to know?`
+        };
+
+        // Add some variety to responses
+        const baseAnswer = canned[top] || canned.general;
+        const variations = [
+            baseAnswer,
+            `${baseAnswer} Feel free to ask me anything else about our products or services.`,
+            `${baseAnswer} Is there anything specific I can help you with today?`,
+            baseAnswer
+        ];
+
+        const answer = variations[Math.floor(Math.random() * variations.length)];
+        await appendHistory(sessionId, 'assistant', answer);
+        const result = { answer, sources: [], clarification: generateClarificationOptions(userMessage) };
+
+        // Don't cache fallback responses to allow for variety
+        // await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
+
+        // Record analytics for fallback response
+        const responseTime = Date.now() - startTime;
+        recordChatAnalytics(sessionId, userMessage, answer, [], responseTime, true);
+
+        console.log(`✅ Used fallback response for intent: ${top}`);
+        return result;
     } catch (error) {
         const message = (error as Error)?.message || 'Unexpected error';
         await appendHistory(sessionId, 'assistant', message);
