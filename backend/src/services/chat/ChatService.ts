@@ -132,6 +132,7 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
                 { role: 'user', content: userMessage }
             ] as const;
 
+            console.log('🤖 Calling OpenAI with context-based prompt');
             const completion = await openai.chat.completions.create({
                 model: CHAT_MODEL,
                 messages: messages as any,
@@ -139,6 +140,7 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
                 max_tokens: 500
             });
             const answer = completion.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
+            console.log(`✅ OpenAI response: "${answer.substring(0, 100)}..."`);
             await appendHistory(sessionId, 'assistant', answer);
 
             // Record analytics for vector match response
