@@ -227,6 +227,11 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
             await appendHistory(sessionId, 'assistant', answer);
             const result = { answer, sources: [] , clarification: generateClarificationOptions(userMessage)};
             await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
+
+            // Record analytics for general model response
+            const responseTime = Date.now() - startTime;
+            recordChatAnalytics(sessionId, userMessage, answer, [], responseTime, true);
+
             return result;
         } catch {
             // 2) If OpenAI not configured, return a heuristic fallback
