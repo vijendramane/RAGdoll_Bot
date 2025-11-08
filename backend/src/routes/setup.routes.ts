@@ -16,12 +16,39 @@ const DbConfigSchema = z.object({
 router.post('/test-connection', async (req, res) => {
 	try {
 		const parsed = DbConfigSchema.safeParse(req.body);
-		if (!parsed.success) return res.status(400).json({ error: 'Invalid config', details: parsed.error.flatten() });
+		if (!parsed.success) {
+			return res.status(400).json({
+				error: 'Invalid configuration',
+				details: parsed.error.flatten()
+			});
+		}
+
+		console.log('Testing database connection with config:', {
+			type: parsed.data.type,
+			host: parsed.data.host,
+			port: parsed.data.port,
+			database: parsed.data.database
+		});
+
 		await testConnection(parsed.data);
-		return res.json({ ok: true });
+		return res.json({ ok: true, message: 'Connection successful' });
 	} catch (err) {
-		const msg = (err as Error).message || 'Unexpected error';
-		return res.status(500).json({ error: msg });
+		const error = err as Error;
+		console.error('Database connection test failed:', error);
+
+		// Provide more specific error messages
+		let errorMessage = error.message;
+		if (errorMessage.includes('ECONNREFUSED')) {
+			errorMessage = 'Connection refused. Check if database server is running and accessible.';
+		} else if (errorMessage.includes('ENOTFOUND')) {
+			errorMessage = 'Host not found. Check the database hostname.';
+		} else if (errorMessage.includes('ER_ACCESS_DENIED')) {
+			errorMessage = 'Access denied. Check username and password.';
+		} else if (errorMessage.includes('ER_BAD_DB_ERROR')) {
+			errorMessage = 'Database not found. Check database name.';
+		}
+
+		return res.status(500).json({ error: errorMessage });
 	}
 });
 
