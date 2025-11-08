@@ -1,0 +1,38 @@
+version: '3.9'
+services:
+  backend:
+    build: ./backend
+    container_name: chatbot-backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "4000:4000"
+    depends_on:
+      - redis
+    networks:
+      - chatbot-net
+
+  frontend:
+    build: ./frontend
+    container_name: chatbot-frontend
+    env_file:
+      - ./frontend/.env.local
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - chatbot-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: chatbot-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - chatbot-net
+
+networks:
+  chatbot-net:
+    driver: bridge
+

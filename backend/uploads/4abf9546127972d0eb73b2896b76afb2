@@ -1,0 +1,114 @@
+-- Create FAQs table
+CREATE TABLE IF NOT EXISTS faqs (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  category VARCHAR(100) NOT NULL,
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  tags VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert Netflix FAQs
+INSERT INTO faqs (id, category, question, answer, tags) VALUES
+(1, 'Account & Subscription', 'How do I create a Netflix account?', 'Visit netflix.com, click ''Sign Up'', enter your email, create a password, choose a plan (Basic/Standard/Premium), and add payment information. You can start watching immediately.', 'account,signup,registration'),
+
+(2, 'Account & Subscription', 'What are the different Netflix subscription plans?', 'We offer three plans: Basic ($9.99/month - 1 screen, SD), Standard ($15.49/month - 2 screens, HD), and Premium ($19.99/month - 4 screens, 4K UHD).', 'plans,pricing,subscription'),
+
+(3, 'Account & Subscription', 'How do I cancel my Netflix subscription?', 'Go to Account > Cancel Membership under Membership & Billing. Your account stays active until the end of your billing period.', 'cancel,subscription,account'),
+
+(4, 'Account & Subscription', 'Can I get a refund if I cancel?', 'Netflix doesn''t provide refunds. If you cancel, you can use the service until your current billing period ends.', 'refund,cancel,billing'),
+
+(5, 'Account & Subscription', 'How do I change my Netflix plan?', 'Go to Account > Change Plan, select your new plan, and click Update. Changes take effect immediately or at the next billing cycle.', 'plan,upgrade,downgrade'),
+
+(6, 'Account & Subscription', 'Can I share my Netflix account?', 'You can share within your household. Each plan allows multiple profiles and simultaneous streams based on your subscription tier.', 'sharing,household,profiles'),
+
+(7, 'Payment & Billing', 'How do I update my payment method?', 'Go to Account > Update Payment Info, enter new card details or select a different payment option, then click Update.', 'payment,billing,card'),
+
+(8, 'Payment & Billing', 'What payment methods does Netflix accept?', 'We accept credit/debit cards (Visa, Mastercard, Amex), PayPal, gift cards, and mobile billing (carrier-dependent).', 'payment,methods,billing'),
+
+(9, 'Payment & Billing', 'Why was my payment declined?', 'Common reasons: insufficient funds, expired card, incorrect billing info, or bank restrictions. Contact your bank or try a different payment method.', 'payment,declined,error'),
+
+(10, 'Account & Subscription', 'Can I pause my subscription?', 'Netflix doesn''t offer pause. You can cancel and rejoin anytime. Your profiles and preferences are saved for 10 months after cancellation.', 'pause,subscription,cancel'),
+
+(11, 'Streaming & Technical', 'How many devices can I watch Netflix on?', 'Basic: 1 screen, Standard: 2 screens, Premium: 4 screens simultaneously. You can install the app on unlimited devices.', 'devices,screens,simultaneous'),
+
+(12, 'Streaming & Technical', 'What video quality does Netflix offer?', 'Basic plan: SD (480p), Standard plan: HD (1080p), Premium plan: 4K Ultra HD + HDR (on compatible content and devices).', 'quality,resolution,4k,hd'),
+
+(13, 'Streaming & Technical', 'Why is my video buffering or low quality?', 'Check your internet speed (minimum 3 Mbps for SD, 5 Mbps for HD, 25 Mbps for 4K). Restart your device/router or check Data Usage settings in Account.', 'buffering,quality,technical'),
+
+(14, 'Streaming & Technical', 'What internet speed do I need for Netflix?', 'Minimum: 3 Mbps. Recommended: 5 Mbps for HD, 25 Mbps for Ultra HD. Multiple streams require higher speeds.', 'internet,speed,bandwidth'),
+
+(15, 'Downloads & Offline', 'Can I download shows to watch offline?', 'Yes, download available titles on the Netflix app (iOS, Android, Windows). Look for the download icon on eligible content.', 'download,offline,mobile'),
+
+(16, 'Downloads & Offline', 'How many downloads can I have at once?', 'You can have up to 100 active downloads per device on as many devices as your plan allows.', 'download,limit,offline'),
+
+(17, 'Downloads & Offline', 'How long do downloads last?', 'Most downloads expire in 7 days. Once you start watching, you typically have 48 hours to finish before it expires.', 'download,expiry,offline'),
+
+(18, 'Devices & Compatibility', 'Which devices support Netflix?', 'Smart TVs, streaming devices (Roku, Chromecast, Apple TV, Fire TV), game consoles (PlayStation, Xbox), smartphones, tablets, computers, and more.', 'devices,compatibility,supported'),
+
+(19, 'Devices & Compatibility', 'How do I watch Netflix on my TV?', 'Use a Smart TV with built-in Netflix, connect a streaming device, use game console, or cast from your phone/computer using Chromecast or AirPlay.', 'tv,streaming,cast'),
+
+(20, 'Devices & Compatibility', 'Can I use Netflix on multiple devices at the same time?', 'Yes, depending on your plan: Basic (1), Standard (2), Premium (4) simultaneous streams.', 'devices,simultaneous,streaming'),
+
+(21, 'Content & Viewing', 'How do I find something to watch?', 'Browse by categories, use search, check ''Trending Now'' or ''Top 10'', view personalized recommendations, or explore genres.', 'browse,search,recommendations'),
+
+(22, 'Content & Viewing', 'Why did a show or movie disappear?', 'Licensing agreements expire. We regularly add and remove content. Check ''Last Chance'' or ''Leaving Soon'' sections.', 'content,removed,licensing'),
+
+(23, 'Content & Viewing', 'Can I request shows or movies?', 'While we can''t take individual requests, we consider viewing trends and member feedback when licensing content.', 'request,content,shows'),
+
+(24, 'Content & Viewing', 'What are Netflix Originals?', 'Netflix Originals are exclusive shows and movies produced or distributed by Netflix, available only on our platform.', 'originals,exclusive,content'),
+
+(25, 'Profiles & Parental Controls', 'How do I create profiles?', 'Go to Manage Profiles, click Add Profile, enter a name, select maturity level, and customize avatar. You can create up to 5 profiles per account.', 'profiles,create,manage'),
+
+(26, 'Profiles & Parental Controls', 'How do I set up parental controls?', 'Go to Account > Profile & Parental Controls, select a profile, set viewing restrictions by maturity rating, and create a PIN to prevent changes.', 'parental,controls,kids,restrictions'),
+
+(27, 'Profiles & Parental Controls', 'What is Netflix Kids?', 'Netflix Kids is a special profile experience with only age-appropriate content for children. It has simplified navigation and kid-friendly design.', 'kids,children,profiles'),
+
+(28, 'Profiles & Parental Controls', 'Can I delete viewing history?', 'Yes, go to Account > Profile & Parental Controls > Viewing Activity, then hide individual titles or hide entire series.', 'history,viewing,delete,privacy'),
+
+(29, 'Account Security', 'How do I change my password?', 'Go to Account > Change Password, enter current password, create new password, and check ''Require all devices to sign in again'' to sign out other devices.', 'password,security,account'),
+
+(30, 'Account Security', 'I forgot my password, what do I do?', 'Click ''Forgot Password'' on the sign-in page, enter your email, and follow the reset link sent to your email.', 'password,forgot,reset'),
+
+(31, 'Account Security', 'How do I sign out of all devices?', 'Go to Account > Sign out of all devices. This is useful if you''ve shared your account or suspect unauthorized access.', 'signout,security,devices'),
+
+(32, 'Account Security', 'How do I see what devices are using my account?', 'Go to Account > Recent Device Streaming Activity to see devices that have streamed from your account recently.', 'devices,activity,security'),
+
+(33, 'Troubleshooting', 'Netflix is not working, what should I do?', 'Try: 1) Restart the Netflix app 2) Restart your device 3) Check internet connection 4) Update the Netflix app 5) Reinstall the app.', 'troubleshooting,error,not working'),
+
+(34, 'Troubleshooting', 'I''m getting an error code, what does it mean?', 'Error codes indicate specific issues. Visit netflix.com/help and search your error code for detailed troubleshooting steps.', 'error,code,troubleshooting'),
+
+(35, 'Troubleshooting', 'Why can''t I sign in to Netflix?', 'Check: 1) Email/password are correct 2) Account is active/not cancelled 3) No payment issues 4) Try password reset if needed.', 'signin,login,error'),
+
+(36, 'Troubleshooting', 'Audio and video are out of sync, how do I fix it?', 'Try: 1) Close and reopen the title 2) Restart your device 3) Check for app/system updates 4) Try a different title to see if issue persists.', 'audio,sync,technical'),
+
+(37, 'Subtitles & Audio', 'How do I turn on subtitles or captions?', 'While watching, select the dialog icon or Audio & Subtitles option, then choose your preferred language and subtitle style.', 'subtitles,captions,accessibility'),
+
+(38, 'Subtitles & Audio', 'How do I change audio language?', 'While watching, select the dialog icon or Audio & Subtitles, then choose your preferred audio language if available for that title.', 'audio,language,dubbing'),
+
+(39, 'Subtitles & Audio', 'Can I customize subtitle appearance?', 'Yes, go to Account > Subtitle Appearance to change font, size, color, and background for a better viewing experience.', 'subtitles,customization,accessibility'),
+
+(40, 'Gift Cards & Promotions', 'How do I redeem a Netflix gift card?', 'Go to netflix.com/redeem, enter the PIN code from your gift card, and it will be applied to your account as a credit balance.', 'giftcard,redeem,payment'),
+
+(41, 'Gift Cards & Promotions', 'Do Netflix gift cards expire?', 'Gift cards don''t expire. Once redeemed, the credit stays on your account until used for subscription payments.', 'giftcard,expiry,validity'),
+
+(42, 'International & Travel', 'Can I use Netflix when traveling abroad?', 'Yes, you can watch Netflix in any country where the service is available. Content library may vary by location due to licensing.', 'travel,international,abroad'),
+
+(43, 'International & Travel', 'Why is content different in other countries?', 'Content availability varies by region due to licensing agreements. Some shows/movies are only licensed for specific countries.', 'content,region,international'),
+
+(44, 'Features', 'What is Netflix''s ''Skip Intro'' feature?', 'Skip Intro appears during show intros, allowing you to skip directly to the main content with one click.', 'feature,skip,intro'),
+
+(45, 'Features', 'What is ''My List'' and how do I use it?', 'My List is your personal watchlist. Click the ''+'' icon on any title to add it. Access it from the home screen to quickly find saved content.', 'mylist,watchlist,feature'),
+
+(46, 'Features', 'How do I rate shows and movies?', 'Click thumbs up or thumbs down on any title. This helps Netflix personalize your recommendations.', 'rating,thumbs,recommendations'),
+
+(47, 'Features', 'What are Netflix''s maturity ratings?', 'Ratings include: Little Kids, Older Kids, Teens, and Adults. They''re based on content maturity and help you control what profiles can watch.', 'ratings,maturity,parental'),
+
+(48, 'Contact & Support', 'How do I contact Netflix customer service?', 'Visit netflix.com/help, use live chat, or call the phone number listed for your region. Support is available 24/7.', 'support,contact,help'),
+
+(49, 'Contact & Support', 'Is Netflix customer support available 24/7?', 'Yes, Netflix customer support is available 24 hours a day, 7 days a week via phone, live chat, or help center.', 'support,hours,availability'),
+
+(50, 'General', 'Is Netflix available in my country?', 'Netflix is available in over 190 countries. Visit netflix.com to check availability in your region.', 'availability,country,region');
+
+-- Query to verify data
+SELECT category, COUNT(*) as faq_count FROM faqs GROUP BY category ORDER BY faq_count DESC;
