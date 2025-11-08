@@ -178,14 +178,15 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
 
         try {
             const fc = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
+                model: CHAT_MODEL,
                 messages: [
                     { role: 'system', content: 'You can call functions to fetch real-time data.' },
                     { role: 'user', content: userMessage }
                 ],
                 tools,
                 tool_choice: 'auto',
-                temperature: 0
+                temperature: 0,
+                max_tokens: 300
             } as any);
             const choice: any = fc.choices?.[0];
             const toolCall = choice?.message?.tool_calls?.[0];
