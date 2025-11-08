@@ -2,7 +2,7 @@ import { embedTexts } from '../rag/EmbeddingService';
 import { semanticSearch } from '../rag/RetrievalService';
 import { generateClarificationOptions } from '../query/ClarificationService';
 import { appendHistory } from './ContextManager';
-import { openai } from '../../config/openai.config';
+import { openai, CHAT_MODEL } from '../../config/openai.config';
 import { classifyIntent } from './IntentClassifier';
 import { getConfiguredAdapter } from '../../config/database.config';
 import { redis } from '../../config/redis.config';
