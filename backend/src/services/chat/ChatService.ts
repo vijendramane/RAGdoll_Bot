@@ -6,6 +6,7 @@ import { openai } from '../../config/openai.config';
 import { classifyIntent } from './IntentClassifier';
 import { getConfiguredAdapter } from '../../config/database.config';
 import { redis } from '../../config/redis.config';
+import { AnalyticsService } from '../analytics/AnalyticsService';
 
 export interface ChatResult {
 	answer: string;
