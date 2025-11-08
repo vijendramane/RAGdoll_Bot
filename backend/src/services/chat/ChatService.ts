@@ -132,7 +132,13 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
             const completion = await openai.chat.completions.create({ model: 'gpt-4o-mini', messages: messages as any, temperature: 0.3 });
             const answer = completion.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
             await appendHistory(sessionId, 'assistant', answer);
-            return { answer, sources: matches.map((m) => String(m.metadata?.source || 'faq')) };
+
+            // Record analytics for vector match response
+            const responseTime = Date.now() - startTime;
+            const sources = matches.map((m) => String(m.metadata?.source || 'faq'));
+            recordChatAnalytics(sessionId, userMessage, answer, sources, responseTime, true);
+
+            return { answer, sources };
         }
 
         // Low confidence or no vector context:
