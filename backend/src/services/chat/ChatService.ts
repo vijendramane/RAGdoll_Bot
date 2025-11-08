@@ -13,6 +13,43 @@ export interface ChatResult {
 	clarification?: Array<{ id: number; text: string; icon: string; confidence?: number }>;
 }
 
+// Order ID clarification logic
+function detectOrderIntent(message: string): boolean {
+    const orderKeywords = [
+        'order', 'payment', 'refund', 'shipment', 'delivery', 'track', 'status',
+        'purchase', 'bought', 'transaction', 'billing', 'invoice', 'receipt'
+    ];
+    const lowerMessage = message.toLowerCase();
+    return orderKeywords.some(keyword => lowerMessage.includes(keyword));
+}
+
+function extractOrderId(message: string): string | null {
+    // Common order ID patterns: alphanumeric combinations
+    const patterns = [
+        /\b[A-Z]{2,}-?\d{4,}\b/g,  // AB-1234 format
+        /\b\d{6,}\b/g,             // 123456 format
+        /\b[A-Z]{1,}\d{5,}\b/g,    // A12345 format
+    ];
+
+    for (const pattern of patterns) {
+        const matches = message.match(pattern);
+        if (matches && matches.length > 0) {
+            return matches[0];
+        }
+    }
+    return null;
+}
+
+function generateOrderClarificationResponse(intent: string): string {
+    const responses = [
+        "I can help you with that! To check your order status, I'll need your order ID. Could you please provide it?",
+        "I'd be happy to help track your order. What's your order ID?",
+        "To assist you with your order, I'll need the order ID. Can you share it with me?",
+        "I can help with order inquiries. Please provide your order ID so I can look that up for you."
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+}
+
 export async function handleQuery(sessionId: string, userMessage: string): Promise<ChatResult> {
     await appendHistory(sessionId, 'user', userMessage);
     try {
