@@ -44,7 +44,11 @@ app.use(morgan('combined'));
 	console.log('🔍 Testing OpenAI connection...');
 	const openaiConnected = await testOpenAIConnection();
 	if (!openaiConnected) {
-		console.error('❌ OpenAI connection failed. Chat functionality will not work properly.');
+		console.warn('⚠️ OpenAI connection failed. Chat functionality will be limited to basic responses.');
+		console.info('💡 To enable full AI functionality, please:');
+		console.info('   1. Get a valid OpenAI API key from https://platform.openai.com/account/api-keys');
+		console.info('   2. Update the OPENAI_API_KEY in backend/.env');
+		console.info('   3. Restart the server');
 	}
 
 	// Seed sample FAQ if enabled
