@@ -112,9 +112,12 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
         }
         let matches: Array<{ score: number; metadata?: Record<string, unknown> }> = [];
         try {
+            console.log(`🔍 Processing query: "${userMessage}"`);
             const [queryEmbedding] = await embedTexts([userMessage]);
             matches = await semanticSearch(queryEmbedding, 3);
+			console.log(`📊 Found ${matches.length} vector matches`);
         } catch (e) {
+            console.error('❌ Embedding/vector lookup failed:', e);
             // Embedding/vector lookup failed (likely no OPENAI_API_KEY). Continue with zero matches.
             matches = [];
         }
