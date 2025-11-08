@@ -51,7 +51,36 @@ function generateOrderClarificationResponse(intent: string): string {
     return responses[Math.floor(Math.random() * responses.length)];
 }
 
+// Helper function to record analytics
+async function recordChatAnalytics(
+    sessionId: string,
+    userMessage: string,
+    answer: string,
+    sources: string[],
+    responseTime: number,
+    success: boolean
+): Promise<void> {
+    try {
+        // Record analytics asynchronously without blocking the response
+        AnalyticsService.recordChat({
+            sessionId,
+            timestamp: new Date().toISOString(),
+            userMessage,
+            botResponse: answer,
+            sources,
+            responseTime,
+            success
+        }).catch(error => {
+            console.error('Failed to record analytics:', error);
+        });
+    } catch (error) {
+        // Don't let analytics errors affect the main chat flow
+        console.error('Analytics recording error:', error);
+    }
+}
+
 export async function handleQuery(sessionId: string, userMessage: string): Promise<ChatResult> {
+    const startTime = Date.now();
     await appendHistory(sessionId, 'user', userMessage);
     try {
         // Check for order-related queries that need order ID clarification
@@ -61,6 +90,11 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
         if (hasOrderIntent && !orderId) {
             const clarificationResponse = generateOrderClarificationResponse('order');
             await appendHistory(sessionId, 'assistant', clarificationResponse);
+
+            // Record analytics for clarification request
+            const responseTime = Date.now() - startTime;
+            recordChatAnalytics(sessionId, userMessage, clarificationResponse, [], responseTime, true);
+
             return { answer: clarificationResponse, sources: [] };
         }
 
