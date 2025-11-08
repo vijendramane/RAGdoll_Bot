@@ -103,6 +103,11 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
         if (cached) {
             const parsed = JSON.parse(cached);
             await appendHistory(sessionId, 'assistant', parsed.answer);
+
+            // Record analytics for cached response
+            const responseTime = Date.now() - startTime;
+            recordChatAnalytics(sessionId, userMessage, parsed.answer, parsed.sources || [], responseTime, true);
+
             return parsed;
         }
         let matches: Array<{ score: number; metadata?: Record<string, unknown> }> = [];
