@@ -3,6 +3,10 @@ import multer from 'multer';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { processFAQFile } from '../services/faq/FAQUploadService';
+import { FAQSourceService } from '../services/faq/FAQSourceService';
+import { vectorDb } from '../config/vectordb.config';
+import { embedTexts } from '../services/rag/EmbeddingService';
+import { chunkText } from '../services/rag/ChunkingService';
 
 const router = Router();
 
