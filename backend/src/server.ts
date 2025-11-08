@@ -27,7 +27,7 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('combined'));
 
-// Ensure required directories exist
+// Ensure required directories exist and test services
 (async () => {
 	const requiredDirs = ['uploads', 'data'];
 	for (const dir of requiredDirs) {
@@ -38,6 +38,14 @@ app.use(morgan('combined'));
 			console.error(`✗ Failed to create directory ${dir}:`, error);
 		}
 	}
+
+	// Test OpenAI connection
+	console.log('🔍 Testing OpenAI connection...');
+	const openaiConnected = await testOpenAIConnection();
+	if (!openaiConnected) {
+		console.error('❌ OpenAI connection failed. Chat functionality will not work properly.');
+	}
+
 	// Seed sample FAQ if enabled
 	await seedFAQIfEnabled();
 })();
