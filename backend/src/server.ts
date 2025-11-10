@@ -10,10 +10,12 @@ import chatRoutes from './routes/chat.routes';
 import faqRoutes from './routes/faq.routes';
 import setupRoutes from './routes/setup.routes';
 import adminRoutes from './routes/admin.routes';
+import debugRoutes from './routes/debug.routes';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import fs from 'node:fs/promises';
 import { seedFAQIfEnabled } from './bootstrap/seedFAQ';
+import { testOpenAIConnection } from './config/openai.config';
 
 const app = express();
 const server = http.createServer(app);
@@ -26,9 +28,29 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('combined'));
 
-// Ensure uploads directory exists for FAQ uploads
+// Ensure required directories exist and test services
 (async () => {
-	try { await fs.mkdir('uploads', { recursive: true }); } catch {}
+	const requiredDirs = ['uploads', 'data'];
+	for (const dir of requiredDirs) {
+		try {
+			await fs.mkdir(dir, { recursive: true });
+			console.log(`✓ Directory ensured: ${dir}`);
+		} catch (error) {
+			console.error(`✗ Failed to create directory ${dir}:`, error);
+		}
+	}
+
+	// Test OpenAI connection
+	console.log('🔍 Testing OpenAI connection...');
+	const openaiConnected = await testOpenAIConnection();
+	if (!openaiConnected) {
+		console.warn('⚠️ OpenAI connection failed. Chat functionality will be limited to basic responses.');
+		console.info('💡 To enable full AI functionality, please:');
+		console.info('   1. Get a valid OpenAI API key from https://platform.openai.com/account/api-keys');
+		console.info('   2. Update the OPENAI_API_KEY in backend/.env');
+		console.info('   3. Restart the server');
+	}
+
 	// Seed sample FAQ if enabled
 	await seedFAQIfEnabled();
 })();
@@ -41,6 +63,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/faq', faqRoutes);
 app.use('/api/setup', setupRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/debug', debugRoutes);
 
 // Swagger
 const swaggerSpec = swaggerJSDoc({

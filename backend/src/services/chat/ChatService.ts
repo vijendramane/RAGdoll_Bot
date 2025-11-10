@@ -2,10 +2,11 @@ import { embedTexts } from '../rag/EmbeddingService';
 import { semanticSearch } from '../rag/RetrievalService';
 import { generateClarificationOptions } from '../query/ClarificationService';
 import { appendHistory } from './ContextManager';
-import { openai } from '../../config/openai.config';
+import { openai, CHAT_MODEL } from '../../config/openai.config';
 import { classifyIntent } from './IntentClassifier';
 import { getConfiguredAdapter } from '../../config/database.config';
 import { redis } from '../../config/redis.config';
+import { AnalyticsService } from '../analytics/AnalyticsService';
 
 export interface ChatResult {
 	answer: string;
@@ -13,21 +14,118 @@ export interface ChatResult {
 	clarification?: Array<{ id: number; text: string; icon: string; confidence?: number }>;
 }
 
+// Order ID clarification logic
+function detectOrderIntent(message: string): boolean {
+    const orderKeywords = [
+        'order', 'payment', 'refund', 'shipment', 'delivery', 'track', 'status',
+        'purchase', 'bought', 'transaction', 'billing', 'invoice', 'receipt'
+    ];
+    const lowerMessage = message.toLowerCase();
+    return orderKeywords.some(keyword => lowerMessage.includes(keyword));
+}
+
+function extractOrderId(message: string): string | null {
+    // Common order ID patterns: alphanumeric combinations
+    const patterns = [
+        /\b[A-Z]{2,}-?\d{4,}\b/g,  // AB-1234 format
+        /\b\d{6,}\b/g,             // 123456 format
+        /\b[A-Z]{1,}\d{5,}\b/g,    // A12345 format
+    ];
+
+    for (const pattern of patterns) {
+        const matches = message.match(pattern);
+        if (matches && matches.length > 0) {
+            return matches[0];
+        }
+    }
+    return null;
+}
+
+function generateOrderClarificationResponse(intent: string): string {
+    const responses = [
+        "I can help you with that! To check your order status, I'll need your order ID. Could you please provide it?",
+        "I'd be happy to help track your order. What's your order ID?",
+        "To assist you with your order, I'll need the order ID. Can you share it with me?",
+        "I can help with order inquiries. Please provide your order ID so I can look that up for you."
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+}
+
+// Helper function to record analytics
+async function recordChatAnalytics(
+    sessionId: string,
+    userMessage: string,
+    answer: string,
+    sources: string[],
+    responseTime: number,
+    success: boolean
+): Promise<void> {
+    try {
+        // Record analytics asynchronously without blocking the response
+        AnalyticsService.recordChat({
+            sessionId,
+            timestamp: new Date().toISOString(),
+            userMessage,
+            botResponse: answer,
+            sources,
+            responseTime,
+            success
+        }).catch(error => {
+            console.error('Failed to record analytics:', error);
+        });
+    } catch (error) {
+        // Don't let analytics errors affect the main chat flow
+        console.error('Analytics recording error:', error);
+    }
+}
+
+// Helper function to check if OpenAI is available
+function isOpenAIAvailable(): boolean {
+    return !!process.env.OPENAI_API_KEY &&
+           process.env.OPENAI_API_KEY !== 'dummy-key' &&
+           process.env.OPENAI_API_KEY.length > 30 &&
+           !process.env.OPENAI_API_KEY.includes('dummy-key');
+}
+
 export async function handleQuery(sessionId: string, userMessage: string): Promise<ChatResult> {
+    const startTime = Date.now();
     await appendHistory(sessionId, 'user', userMessage);
     try {
+        // Check for order-related queries that need order ID clarification
+        const hasOrderIntent = detectOrderIntent(userMessage);
+        const orderId = extractOrderId(userMessage);
+
+        if (hasOrderIntent && !orderId) {
+            const clarificationResponse = generateOrderClarificationResponse('order');
+            await appendHistory(sessionId, 'assistant', clarificationResponse);
+
+            // Record analytics for clarification request
+            const responseTime = Date.now() - startTime;
+            recordChatAnalytics(sessionId, userMessage, clarificationResponse, [], responseTime, true);
+
+            return { answer: clarificationResponse, sources: [] };
+        }
+
         // Cache lookup
         const cached = await (redis as any).get?.(`ans:${userMessage}`);
         if (cached) {
             const parsed = JSON.parse(cached);
             await appendHistory(sessionId, 'assistant', parsed.answer);
+
+            // Record analytics for cached response
+            const responseTime = Date.now() - startTime;
+            recordChatAnalytics(sessionId, userMessage, parsed.answer, parsed.sources || [], responseTime, true);
+
             return parsed;
         }
         let matches: Array<{ score: number; metadata?: Record<string, unknown> }> = [];
         try {
+            console.log(`🔍 Processing query: "${userMessage}"`);
             const [queryEmbedding] = await embedTexts([userMessage]);
             matches = await semanticSearch(queryEmbedding, 3);
+			console.log(`📊 Found ${matches.length} vector matches`);
         } catch (e) {
+            console.error('❌ Embedding/vector lookup failed:', e);
             // Embedding/vector lookup failed (likely no OPENAI_API_KEY). Continue with zero matches.
             matches = [];
         }
@@ -42,10 +140,23 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
                 { role: 'user', content: userMessage }
             ] as const;
 
-            const completion = await openai.chat.completions.create({ model: 'gpt-4o-mini', messages: messages as any, temperature: 0.3 });
+            console.log('🤖 Calling OpenAI with context-based prompt');
+            const completion = await openai.chat.completions.create({
+                model: CHAT_MODEL,
+                messages: messages as any,
+                temperature: 0.3,
+                max_tokens: 500
+            });
             const answer = completion.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
+            console.log(`✅ OpenAI response: "${answer.substring(0, 100)}..."`);
             await appendHistory(sessionId, 'assistant', answer);
-            return { answer, sources: matches.map((m) => String(m.metadata?.source || 'faq')) };
+
+            // Record analytics for vector match response
+            const responseTime = Date.now() - startTime;
+            const sources = matches.map((m) => String(m.metadata?.source || 'faq'));
+            recordChatAnalytics(sessionId, userMessage, answer, sources, responseTime, true);
+
+            return { answer, sources };
         }
 
         // Low confidence or no vector context:
@@ -80,14 +191,15 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
 
         try {
             const fc = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
+                model: CHAT_MODEL,
                 messages: [
                     { role: 'system', content: 'You can call functions to fetch real-time data.' },
                     { role: 'user', content: userMessage }
                 ],
                 tools,
                 tool_choice: 'auto',
-                temperature: 0
+                temperature: 0,
+                max_tokens: 300
             } as any);
             const choice: any = fc.choices?.[0];
             const toolCall = choice?.message?.tool_calls?.[0];
@@ -110,42 +222,81 @@ export async function handleQuery(sessionId: string, userMessage: string): Promi
                     const result = { answer, sources: [], clarification: generateClarificationOptions(userMessage) };
                     await appendHistory(sessionId, 'assistant', answer);
                     await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
+
+                    // Record analytics for function calling response
+                    const responseTime = Date.now() - startTime;
+                    recordChatAnalytics(sessionId, userMessage, answer, [], responseTime, true);
+
                     return result;
                 }
             }
         } catch {}
 
-        // Next: try a general model answer without RAG
-        try {
-            const general = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
-                messages: [
-                    { role: 'system', content: 'You are a helpful e-commerce assistant. Answer concisely and clearly.' },
-                    { role: 'user', content: userMessage }
-                ],
-                temperature: 0.3
-            });
-            const answer = general.choices[0]?.message?.content || 'I could not generate a response.';
-            await appendHistory(sessionId, 'assistant', answer);
-            const result = { answer, sources: [] , clarification: generateClarificationOptions(userMessage)};
-            await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
-            return result;
-        } catch {
-            // 2) If OpenAI not configured, return a heuristic fallback
-            const intents = classifyIntent(userMessage);
-            const top = Object.entries(intents).sort((a,b) => b[1]-a[1])[0]?.[0] || 'product_info';
-            const canned: Record<string, string> = {
-                product_info: 'I can help with product details and availability. Please provide a product name or SKU.',
-                order_tracking: 'I can help track your order. Please share your order ID.',
-                returns: 'I can help with returns or refunds. Do you have your order ID handy?',
-                shipping: 'I can help with shipping options and delivery times. Which location are you shipping to?'
-            };
-            const answer = canned[top];
-            await appendHistory(sessionId, 'assistant', answer);
-            const result = { answer, sources: [], clarification: generateClarificationOptions(userMessage) };
-            await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
-            return result;
+        // Next: try a general model answer without RAG (only if OpenAI is available)
+        if (isOpenAIAvailable()) {
+            try {
+                console.log('🤖 Calling OpenAI with general e-commerce prompt');
+                const general = await openai.chat.completions.create({
+                    model: CHAT_MODEL,
+                    messages: [
+                        { role: 'system', content: 'You are a helpful e-commerce assistant. Answer concisely and clearly.' },
+                        { role: 'user', content: userMessage }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 400
+                });
+                const answer = general.choices[0]?.message?.content || 'I could not generate a response.';
+                console.log(`✅ OpenAI general response: "${answer.substring(0, 100)}..."`);
+                await appendHistory(sessionId, 'assistant', answer);
+                const result = { answer, sources: [] , clarification: generateClarificationOptions(userMessage)};
+                await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
+
+                // Record analytics for general model response
+                const responseTime = Date.now() - startTime;
+                recordChatAnalytics(sessionId, userMessage, answer, [], responseTime, true);
+
+                return result;
+            } catch (error) {
+                console.error('❌ OpenAI call failed:', error);
+            }
         }
+
+        // Enhanced fallback system when OpenAI is not available
+        console.log('⚠️ Using fallback response system (OpenAI not available)');
+        const intents = classifyIntent(userMessage);
+        const top = Object.entries(intents).sort((a,b) => b[1]-a[1])[0]?.[0] || 'product_info';
+
+        const canned: Record<string, string> = {
+            product_info: `I can help you find products! Try asking about specific items by name, SKU, or category. For example: "What laptops do you have?" or "Show me details for product XYZ123."`,
+            order_tracking: `I can help track your order! Please provide your order ID and I'll check the status for you. Order IDs typically look like ABC-1234 or contain numbers.`,
+            returns: `I can help with returns! To process a return, I'll need your order ID. Returns are usually accepted within 30 days of delivery. What's your order ID?`,
+            shipping: `I can help with shipping questions! Where would you like us to ship your order? We offer standard, expedited, and overnight shipping options.`,
+            payment: `I can help with payment questions! We accept credit cards, debit cards, PayPal, and other payment methods. What's your specific payment question?`,
+            general: `I'm your e-commerce assistant! I can help with products, orders, shipping, returns, and payments. What would you like to know?`
+        };
+
+        // Add some variety to responses
+        const baseAnswer = canned[top] || canned.general;
+        const variations = [
+            baseAnswer,
+            `${baseAnswer} Feel free to ask me anything else about our products or services.`,
+            `${baseAnswer} Is there anything specific I can help you with today?`,
+            baseAnswer
+        ];
+
+        const answer = variations[Math.floor(Math.random() * variations.length)];
+        await appendHistory(sessionId, 'assistant', answer);
+        const result = { answer, sources: [], clarification: generateClarificationOptions(userMessage) };
+
+        // Don't cache fallback responses to allow for variety
+        // await (redis as any).set?.(`ans:${userMessage}`, JSON.stringify(result), 'EX', 300);
+
+        // Record analytics for fallback response
+        const responseTime = Date.now() - startTime;
+        recordChatAnalytics(sessionId, userMessage, answer, [], responseTime, true);
+
+        console.log(`✅ Used fallback response for intent: ${top}`);
+        return result;
     } catch (error) {
         const message = (error as Error)?.message || 'Unexpected error';
         await appendHistory(sessionId, 'assistant', message);

@@ -18,7 +18,7 @@ export async function testConnection(config: DBConfig): Promise<void> {
 	await adapter.connect(config);
 }
 
-const CONFIG_PATH = path.join(process.cwd(), 'backend', 'data', 'db.config.json');
+const CONFIG_PATH = path.join(process.cwd(), 'data', 'db.config.json');
 
 export async function saveDbConfig(config: DBConfig): Promise<void> {
 	await fs.mkdir(path.dirname(CONFIG_PATH), { recursive: true });

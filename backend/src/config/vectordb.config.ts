@@ -2,6 +2,8 @@
 export interface VectorDb {
 	upsert: (vectors: Array<{ id: string; values: number[]; metadata?: Record<string, unknown> }>) => Promise<void>;
 	query: (vector: number[], topK: number) => Promise<Array<{ id: string; score: number; metadata?: Record<string, unknown> }>>;
+	getBySource: (sourceId: string) => Promise<Array<{ id: string; values: number[]; metadata?: Record<string, unknown> }>>;
+	deleteBySource: (sourceId: string) => Promise<void>;
 }
 
 let memoryStore: Array<{ id: string; values: number[]; metadata?: Record<string, unknown> }> = [];
@@ -23,6 +25,12 @@ class MemoryVectorDb implements VectorDb {
 		const scored = memoryStore.map((m) => ({ id: m.id, score: cosineSimilarity(vector, m.values), metadata: m.metadata }));
 		return scored.sort((a, b) => b.score - a.score).slice(0, topK);
 	}
+	async getBySource(sourceId: string) {
+		return memoryStore.filter(m => m.metadata?.source === sourceId);
+	}
+	async deleteBySource(sourceId: string) {
+		memoryStore = memoryStore.filter(m => m.metadata?.source !== sourceId);
+	}
 }
 
 class PineconeVectorDb implements VectorDb {
@@ -42,6 +50,22 @@ class PineconeVectorDb implements VectorDb {
 	async query(vector: number[], topK: number) {
 		const res = await this.index.query({ vector, topK, includeMetadata: true });
 		return (res.matches || []).map((m: any) => ({ id: m.id, score: m.score, metadata: m.metadata }));
+	}
+	async getBySource(sourceId: string) {
+		// Pinecone doesn't support filtering by source metadata directly in list,
+		// so we'll need to use a query with a filter
+		const res = await this.index.query({
+			vector: new Array(1536).fill(0), // Dummy vector for filtering
+			topK: 10000,
+			filter: { source: sourceId },
+			includeMetadata: true,
+			includeValues: true
+		});
+		return (res.matches || []).map((m: any) => ({ id: m.id, values: m.values, metadata: m.metadata }));
+	}
+	async deleteBySource(sourceId: string) {
+		// Delete all vectors with the given sourceId
+		await this.index.delete({ filter: { source: sourceId } });
 	}
 }
 
