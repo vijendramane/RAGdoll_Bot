@@ -15,7 +15,7 @@ export function ChatLayout({ children }: { children: React.ReactNode }) {
 						<div className="font-semibold text-gray-900">Assistant</div>
 						<div className="text-xs text-gray-600">Ready to help with products, orders, shipping, and returns</div>
 					</div>
-					<ThemeToggle />
+				</ThemeToogle>
 				</div>
 			</header>
 			<main className="max-w-6xl mx-auto px-6 py-6">
